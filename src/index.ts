@@ -32,6 +32,119 @@ class LumiereApp extends AppServer {
     let objects: Record<string, ObjectInfo> = {};
     let nextVoiceIndex = 0;
 
+    session.events.onButtonPress(async (button) => {
+      session.logger.info("Button pressed");
+      // On every wake-word invocation we reset detected objects and start fresh
+      awakened = true;
+      objects = {};
+      nextVoiceIndex = 0;
+      session.audio.speak('Awakening. Hold on while I have a look.');
+
+      /* ------------------------ Capture the photo ------------------------ */
+      let dataUrl: string | undefined;
+      let base64Image: string | undefined;
+      try {
+        const photo: PhotoData = await session.camera.requestPhoto();
+        base64Image = photo.buffer.toString('base64');
+        dataUrl = `data:${photo.mimeType};base64,${base64Image}`;
+      } catch (err) {
+        console.error('Failed to capture photo:', err);
+        session.audio.speak("Hmm, I couldn't see anything.");
+        return;
+      }
+
+      /* ------------------------ Roboflow workflow ------------------------ */
+      try {
+        // const rfResponse = await fetch(ROBOFLOW_WORKFLOW_URL, {
+        //   method: 'POST',
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //   },
+        //   body: JSON.stringify({
+        //     api_key: `${ROBOFLOW_API_KEY}`,
+        //     inputs: {
+        //         "image": {"type": "base64", "value": `${base64Image}`}
+        //     }
+        // })
+        // });
+        const rfResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'You are a reliable and trustworthy object detector.' },
+              { 
+                role: 'user',  
+                content: [
+                  { type: "text", text: `Detect all of the 'major' objects from the input image. A 'major' object would be one that you believe would be able to talk if we were in Beauty and the Beast (e.g. Lumiere, Mrs. Potts, etc.). Return a single string of all of the major objects, separated by just commas. Example: 'soda can,water bottle,sunglasses,phone,'. Output only in that format and nothing else.`},
+                  ...(dataUrl ? [{ type: "image_url", image_url: { url: dataUrl } }] : [])
+                ]
+              }
+            ],
+            temperature: 0.3,
+          }),
+        });
+
+        // if (!rfResponse.ok) {
+        //   throw new Error(`Roboflow request failed: ${rfResponse.status} ${rfResponse.statusText}`);
+        // }
+
+        // Roboflow returns a simple comma-separated string such as "soda can,water bottle,sunglasses,"
+        const rfJson = await rfResponse.json();
+        const rfText = (rfJson.choices?.[0]?.message?.content ?? '').trim();
+        const detectedObjects = rfText.split(',').map(t => t.trim()).filter(Boolean);
+        session.logger.info(`detected objects: ${detectedObjects}`)
+
+        /* --------------- Generate persona + assign voice ID --------------- */
+        for (const obj of detectedObjects) {
+          if (objects[obj]) continue; // already generated
+
+          // Cycle through provided voice IDs
+          const voiceId = ELEVENLABS_VOICE_IDS[nextVoiceIndex % ELEVENLABS_VOICE_IDS.length] || '';
+          nextVoiceIndex++;
+
+          let persona = '';
+          try {
+            const personaResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                  { role: 'system', content: 'You create fun, eccentric, and short personas for everyday objects, similar to Lumiere and Mrs. Potts from Beauty and the Beast.' },
+                  { role: 'user', content: `Give me a persona for a "${obj}" and detail the tone in which the object would speak (ex. shakespearean, hip/hop/modern style, etc).` },
+                ],
+                temperature: 0.9,
+              }),
+            });
+            const personaJson = await personaResponse.json();
+            persona = personaJson.choices?.[0]?.message?.content?.trim() ?? '';
+          } catch (err) {
+            console.error('Error generating persona:', err);
+          }
+
+          objects[obj] = { persona, voiceId };
+        }
+
+        if (detectedObjects.length === 0) {
+          session.audio.speak("I didn't find any interesting objects.");
+        } else {
+          session.audio.speak('We are ready!');
+        }
+      } catch (err) {
+        console.error('Error calling Roboflow:', err);
+        session.audio.speak("Sorry, my eyes aren't working right now.");
+      }
+      return; // end wake-word branch
+    });
+
     session.events.onTranscription(async (data) => {
       if (!data.isFinal) return;
 
@@ -50,9 +163,10 @@ class LumiereApp extends AppServer {
 
         /* ------------------------ Capture the photo ------------------------ */
         let dataUrl: string | undefined;
+        let base64Image: string | undefined;
         try {
           const photo: PhotoData = await session.camera.requestPhoto();
-          const base64Image = photo.buffer.toString('base64');
+          base64Image = photo.buffer.toString('base64');
           dataUrl = `data:${photo.mimeType};base64,${base64Image}`;
         } catch (err) {
           console.error('Failed to capture photo:', err);
@@ -62,21 +176,47 @@ class LumiereApp extends AppServer {
 
         /* ------------------------ Roboflow workflow ------------------------ */
         try {
-          const rfResponse = await fetch(ROBOFLOW_WORKFLOW_URL, {
+          // const rfResponse = await fetch(ROBOFLOW_WORKFLOW_URL, {
+          //   method: 'POST',
+          //   headers: {
+          //     'Content-Type': 'application/json',
+          //   },
+          //   body: JSON.stringify({
+          //     api_key: `${ROBOFLOW_API_KEY}`,
+          //     inputs: {
+          //         "image": {"type": "base64", "value": `${base64Image}`}
+          //     }
+          // })
+          // });
+          const rfResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${ROBOFLOW_API_KEY}`,
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
             },
-            body: JSON.stringify({ image: dataUrl }),
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: 'You are a reliable and trustworthy object detector.' },
+                { 
+                  role: 'user',  
+                  content: [
+                    { type: "text", text: `Detect all of the 'major' objects from the input image. A 'major' object would be one that you believe would be able to talk if we were in Beauty and the Beast (e.g. Lumiere, Mrs. Potts, etc.). Return a single string of all of the major objects, separated by just commas. Example: 'soda can,water bottle,sunglasses,phone,'. Output only in that format and nothing else.`},
+                    ...(dataUrl ? [{ type: "image_url", image_url: { url: dataUrl } }] : [])
+                  ]
+                }
+              ],
+              temperature: 0.3,
+            }),
           });
 
-          if (!rfResponse.ok) {
-            throw new Error(`Roboflow request failed: ${rfResponse.status} ${rfResponse.statusText}`);
-          }
+          // if (!rfResponse.ok) {
+          //   throw new Error(`Roboflow request failed: ${rfResponse.status} ${rfResponse.statusText}`);
+          // }
 
           // Roboflow returns a simple comma-separated string such as "soda can,water bottle,sunglasses,"
-          const rfText = (await rfResponse.text()).trim();
+          const rfJson = await rfResponse.json();
+          const rfText = (rfJson.choices?.[0]?.message?.content ?? '').trim();
           const detectedObjects = rfText.split(',').map(t => t.trim()).filter(Boolean);
           session.logger.info(`detected objects: ${rfText}`)
 
@@ -102,7 +242,6 @@ class LumiereApp extends AppServer {
                     { role: 'system', content: 'You create fun, eccentric, and short personas for everyday objects, similar to Lumiere and Mrs. Potts from Beauty and the Beast.' },
                     { role: 'user', content: `Give me a persona for a "${obj}" and detail the tone in which the object would speak (ex. shakespearean, hip/hop/modern style, etc).` },
                   ],
-                  max_tokens: 50,
                   temperature: 0.9,
                 }),
               });
