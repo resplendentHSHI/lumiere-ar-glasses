@@ -99,8 +99,8 @@ class LumiereApp extends AppServer {
                 body: JSON.stringify({
                   model: 'gpt-4o-mini',
                   messages: [
-                    { role: 'system', content: 'You create fun, short personas for everyday objects.' },
-                    { role: 'user', content: `Give me a one-sentence quirky persona for a "${obj}".` },
+                    { role: 'system', content: 'You create fun, eccentric, and short personas for everyday objects, similar to Lumiere and Mrs. Potts from Beauty and the Beast.' },
+                    { role: 'user', content: `Give me a persona for a "${obj}" and detail the tone in which the object would speak (ex. shakespearean, hip/hop/modern style, etc).` },
                   ],
                   max_tokens: 50,
                   temperature: 0.9,
