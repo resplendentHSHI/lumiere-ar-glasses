@@ -1,6 +1,6 @@
 # Mentra Live Lumiere
 
-![Awaken Jacket Demo](awaken_jacket.gif)
+<img src="awaken_jacket.gif" width="200"/>
 
 *Bring your objects to life—just like Lumière and the enchanted castle in Beauty and the Beast! With the `awaken` keyword, your creations can spring to life, move, and interact in magical ways. Watch as your code transforms the ordinary into the extraordinary!*
 
