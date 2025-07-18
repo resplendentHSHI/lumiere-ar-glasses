@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Viewer</title>
+  <style>
+    /* —— Layout ——————————————————————————— */
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+    }
+
+    .video-container {
+      max-width: 100vw;
+      max-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* —— Video element ———————————————————— */
+    .video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="video-container">
+    <video
+      class="video"
+      src="https://dnznrvs05pmza.cloudfront.net/fa588f05-7cc1-4258-88f0-510cf30e534f.mp4?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiNjg5NjM1NzdmYmNkODgwYiIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc1MjUzNzYwMH0.TKLkExD0pyTuj3ce4b1b5xeTmBY1exrneczEDmDkLvE"
+      controls
+      autoplay
+      loop
+      muted
+      playsinline
+    >
+      Your browser does not support the HTML&nbsp;5 video tag.
+    </video>
+  </div>
+</body>
+</html>

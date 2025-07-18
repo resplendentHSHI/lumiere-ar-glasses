@@ -1,3 +1,4 @@
+//lumiere
 import { AppServer, AppSession, PhotoData } from '@mentra/sdk';
 import RunwayML from '@runwayml/sdk';
 
@@ -27,6 +28,8 @@ class LumiereApp extends AppServer {
       apiKey: MENTRAOS_API_KEY,
       port: PORT,
     });
+    this.setupWebviewRoutes();
+
   }
 
   protected async onSession(session: AppSession, sessionId: string, userId: string): Promise<void> {
@@ -61,6 +64,8 @@ class LumiereApp extends AppServer {
         .waitForTaskOutput();
       
         console.log(task);
+        const videoLink = task.output?.[0];
+
       }
       else {
 
@@ -374,6 +379,7 @@ class LumiereApp extends AppServer {
     // });
 
   }
+  
 }
 
 /* ------------------------------ Bootstrap ------------------------------ */
