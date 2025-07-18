@@ -59,11 +59,9 @@ MentraOS install links: [mentra.glass/install](https://mentra.glass/install)
 
 Check out the full documentation at [docs.mentra.glass](https://docs.mentra.glass/core-concepts)
 
-#### Example: The `awaken` Keyword in Action
-
-Below is an example of how objects come alive using the `awaken` keyword:
-
 ![Awaken Jacket Demo](awaken_jacket.gif)
+
+*Bring your objects to life—just like Lumière and the enchanted castle in Beauty and the Beast! With the `awaken` keyword, your creations can spring to life, move, and interact in magical ways. Watch as your code transforms the ordinary into the extraordinary!*
 
 #### Subscribing to events
 
